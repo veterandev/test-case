@@ -23,4 +23,19 @@ export type ApiResponse = SuccessResponse | NeedsInfoResponse;
 export type SynthesizePayload = {
   text: string;
   format?: string;
+  metadata?: {
+    targetAudience?: string;
+    tone?: string;
+    ndaLevel?: string;
+    industry?: string;
+    length?: string;
+  };
+};
+
+export type UploadResponse = {
+  status: "SUCCESS";
+  file_name: string;
+  file_type: string;
+  file_path: string;
+  text_content?: string | null;
 };

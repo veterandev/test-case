@@ -1,13 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { WandSparkles, Upload, Mic } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import type { ChangeEvent, ReactNode } from "react";
+import { Mic, Square, Upload, WandSparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { SynthesizePayload } from "./casedepth-types";
+import { SynthesizePayload, UploadResponse } from "./casedepth-types";
 
 interface LeftPanelProps {
   onSynthesize: (payload: SynthesizePayload) => void | Promise<void>;
@@ -15,7 +22,6 @@ interface LeftPanelProps {
 }
 
 export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
-  // State برای تمام اقلام اطلاعاتی
   const [text, setText] = useState("");
   const [format, setFormat] = useState("LinkedIn Post");
   const [targetAudience, setTargetAudience] = useState("");
@@ -24,79 +30,185 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
   const [industry, setIndustry] = useState("");
   const [length, setLength] = useState("Medium");
 
-  const canSubmit = useMemo(() => text.trim().length > 0 && !isLoading, [text, isLoading]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const canSubmit = useMemo(
+    () => text.trim().length > 0 && !isLoading && !isUploading && !isRecording,
+    [text, isLoading, isUploading, isRecording]
+  );
+
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ||
+    "http://127.0.0.1:8000";
+
+  const uploadFileToBackend = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => "");
+        throw new Error(
+          `Upload failed: ${res.status} ${res.statusText}${
+            errorText ? ` — ${errorText}` : ""
+          }`
+        );
+      }
+
+      const data = (await res.json()) as UploadResponse;
+
+      if (data.text_content) setText(data.text_content);
+      else setText(`Uploaded file: ${data.file_name}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadFileToBackend(file);
+    e.target.value = "";
+  };
+
+  const handleUploadClick = () => {
+    // بدون asChild: خودمان input را کلیک می‌کنیم
+    fileInputRef.current?.click();
+  };
+
+  const handleRecordToggle = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    chunksRef.current = [];
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunksRef.current.push(event.data);
+    };
+
+    recorder.onstop = async () => {
+      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      const file = new File([blob], `recording-${Date.now()}.webm`, {
+        type: blob.type,
+      });
+
+      stream.getTracks().forEach((track) => track.stop());
+      await uploadFileToBackend(file);
+    };
+
+    recorder.start();
+    setIsRecording(true);
+  };
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
 
-    // ارسال داده‌ها به بک‌اند
-    // نکته: اگر بک‌اند شما فعلاً فقط text و format را می‌گیرد, 
-    // این مقادیر اضافی مشکلی ایجاد نمی‌کنند و می‌توانید بعداً در بک‌اند پردازششان کنید.
-    await onSynthesize({ 
-      text: text.trim(), 
+    await onSynthesize({
+      text: text.trim(),
       format,
-      // @ts-ignore - این فیلدها را برای توسعه آینده اضافه می‌کنیم
-      metadata: {
-        targetAudience,
-        tone,
-        ndaLevel,
-        industry,
-        length
-      }
+      metadata: { targetAudience, tone, ndaLevel, industry, length },
     });
   };
 
+  const disableUpload = isLoading || isUploading || isRecording;
+
   return (
-    <Card className="h-full border-slate-200 shadow-sm overflow-hidden">
-      <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle className="text-xl text-slate-900">Intel Intake</CardTitle>
+    <Card className="border-slate-200 shadow-sm">
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <CardTitle>Intel Intake</CardTitle>
             <CardDescription>
               Input and baseline narrative parameters for the current case.
             </CardDescription>
           </div>
-          <Badge variant="outline" className="bg-white">MVP</Badge>
+          <Badge variant="secondary">MVP</Badge>
         </div>
       </CardHeader>
-      
-      <CardContent className="space-y-6 p-6">
-        {/* بخش ورودی متن اصلی */}
-        <section className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-900">Raw Executive Feed</label>
-            <p className="text-xs text-slate-500">Paste source material or type directly.</p>
-          </div>
-          <Textarea 
-            value={text} 
-            onChange={(e) => setText(e.target.value)} 
+
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Raw Executive Feed</label>
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             placeholder="Paste raw executive input here..."
-            className="min-h-[180px] resize-y border-slate-300 bg-white" 
-            disabled={isLoading} 
+            className="min-h-[180px] resize-y border-slate-300 bg-white"
+            disabled={isLoading || isUploading}
           />
-          
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button type="button" variant="outline" className="flex-1 justify-start gap-2 text-xs" disabled={isLoading}>
-              <Upload className="h-3.5 w-3.5" />
-              Upload File
-            </Button>
-            <Button type="button" variant="outline" className="flex-1 justify-start gap-2 text-xs" disabled={isLoading}>
-              <Mic className="h-3.5 w-3.5" />
-              Record Audio
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <div>
+            <Input
+              ref={fileInputRef}
+              id="casedepth-file-upload"
+              type="file"
+              accept=".txt,.md,.json,.csv,.log,.py,.js,.ts,.tsx,.jsonl,audio/*"
+              onChange={handleFileInputChange}
+              className="hidden"
+              disabled={disableUpload}
+            />
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleUploadClick}
+              disabled={disableUpload}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {isUploading ? "Uploading..." : "Upload File"}
             </Button>
           </div>
-        </section>
 
-        {/* بخش پارامترهای سنتز */}
-        <section className="space-y-4 pt-4 border-t border-slate-100">
-          <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-900">Context & Parameters</label>
-            <p className="text-xs text-slate-500">Define narrative framing before synthesis.</p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleRecordToggle}
+            disabled={isLoading || isUploading}
+          >
+            {isRecording ? (
+              <>
+                <Square className="mr-2 h-4 w-4" />
+                Stop Recording
+              </>
+            ) : (
+              <>
+                <Mic className="mr-2 h-4 w-4" />
+                Record Audio
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold">Context & Parameters</h3>
+            <p className="text-xs text-slate-500">
+              Define narrative framing before synthesis.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Output Format">
-              <select 
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field label="Format">
+              <select
                 value={format}
                 onChange={(e) => setFormat(e.target.value)}
                 disabled={isLoading}
@@ -109,8 +221,8 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
               </select>
             </Field>
 
-            <Field label="Tone of Voice">
-              <select 
+            <Field label="Tone">
+              <select
                 value={tone}
                 onChange={(e) => setTone(e.target.value)}
                 disabled={isLoading}
@@ -125,17 +237,17 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
             </Field>
 
             <Field label="Target Audience">
-              <Input 
+              <Input
                 value={targetAudience}
                 onChange={(e) => setTargetAudience(e.target.value)}
-                placeholder="e.g. C-Levels" 
+                placeholder="e.g. C-Levels"
                 className="h-9 text-xs"
                 disabled={isLoading}
               />
             </Field>
 
             <Field label="NDA Level">
-              <select 
+              <select
                 value={ndaLevel}
                 onChange={(e) => setNdaLevel(e.target.value)}
                 disabled={isLoading}
@@ -148,17 +260,17 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
             </Field>
 
             <Field label="Industry">
-              <Input 
+              <Input
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                placeholder="Optional" 
+                placeholder="Optional"
                 className="h-9 text-xs"
                 disabled={isLoading}
               />
             </Field>
 
-            <Field label="Output Length">
-              <select 
+            <Field label="Length">
+              <select
                 value={length}
                 onChange={(e) => setLength(e.target.value)}
                 disabled={isLoading}
@@ -170,35 +282,27 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
               </select>
             </Field>
           </div>
-        </section>
+        </div>
 
-        <Button 
-          onClick={handleSubmit} 
-          disabled={!canSubmit} 
-          className="h-11 w-full gap-2 bg-slate-900 text-white hover:bg-slate-800 transition-all active:scale-[0.98]"
-        >
-          {isLoading ? (
-            <span className="flex items-center gap-2">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Processing...
-            </span>
-          ) : (
-            <>
-              <WandSparkles className="h-4 w-4" />
-              Synthesize Narrative
-            </>
-          )}
+        <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full">
+          <WandSparkles className="mr-2 h-4 w-4" />
+          {isLoading ? "Processing..." : "Synthesize Narrative"}
         </Button>
       </CardContent>
     </Card>
   );
 }
 
-// کامپوننت کمکی برای نظم دادن به فیلدها
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</label>
+      <label className="text-xs font-medium text-slate-600">{label}</label>
       {children}
     </div>
   );

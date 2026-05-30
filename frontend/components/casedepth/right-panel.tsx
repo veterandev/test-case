@@ -1,29 +1,54 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, BarChart3, CheckCircle2, Copy, Info, Loader2, Send, Sparkles } from "lucide-react";
+import {
+  AlertCircle,
+  BarChart3,
+  CheckCircle2,
+  Copy,
+  Info,
+  Loader2,
+  Send,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiResponse, PanelState } from "./casedepth-types";
+import type { ApiResponse, PanelState } from "./casedepth-types";
 
 interface RightPanelProps {
   currentState: PanelState;
-  data: ApiResponse;
+  data: ApiResponse | null;
   isLoading?: boolean;
   onSubmitGaps: (answers: string[]) => void;
-  errorMessage?: string | null; // اضافه شد
+  errorMessage?: string | null;
+  onReset?: () => void;
 }
 
-export function RightPanel({ currentState, data, isLoading = false, onSubmitGaps, errorMessage }: RightPanelProps) {
+export function RightPanel({
+  currentState,
+  data,
+  isLoading = false,
+  onSubmitGaps,
+  errorMessage,
+  onReset,
+}: RightPanelProps) {
   return (
     <Card className="h-full min-h-[640px] border-slate-200 bg-white shadow-sm">
       <CardHeader className="border-b border-slate-100">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle className="text-lg text-slate-900">Narrative Architecture</CardTitle>
+            <CardTitle className="text-lg text-slate-900">
+              Narrative Architecture
+            </CardTitle>
             <CardDescription className="mt-1 text-slate-600">
               Synthesized outputs, diagnostic gaps, and final refined narrative.
             </CardDescription>
@@ -37,32 +62,34 @@ export function RightPanel({ currentState, data, isLoading = false, onSubmitGaps
         <ScrollArea className="h-full">
           <div className="p-5">
             {currentState === "IDLE" && <IdleView />}
+
             {currentState === "PROCESSING" && <ProcessingView />}
+
             {currentState === "SUCCESS" && <SuccessView data={data} />}
+
             {currentState === "NEEDS_INFO" && (
-              <NeedsInfoView data={data} isLoading={isLoading} onSubmitGaps={onSubmitGaps} />
+              <NeedsInfoView
+                data={data}
+                isLoading={isLoading}
+                onSubmitGaps={onSubmitGaps}
+              />
             )}
+
             {currentState === "FINAL_RESULT" && <FinalResultView data={data} />}
+
             {currentState === "ERROR" && <ErrorView message={errorMessage} />}
+
+            {onReset ? (
+              <div className="mt-6 flex justify-end">
+                <Button variant="outline" onClick={onReset}>
+                  Reset
+                </Button>
+              </div>
+            ) : null}
           </div>
         </ScrollArea>
       </CardContent>
     </Card>
-  );
-}
-
-// کامپوننت جدید برای نمایش خطا
-function ErrorView({ message }: { message: string | null | undefined }) {
-  return (
-    <div className="flex min-h-[520px] flex-col items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-6 py-10 text-center animate-in fade-in">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100">
-        <AlertCircle className="h-8 w-8 text-rose-600" />
-      </div>
-      <h3 className="text-lg font-semibold text-rose-900">Operation Failed</h3>
-      <p className="mt-2 max-w-sm text-sm leading-6 text-rose-700">
-        {message || "An unexpected error occurred while communicating with the server."}
-      </p>
-    </div>
   );
 }
 
@@ -99,9 +126,17 @@ function StatusBadge({ currentState }: { currentState: PanelState }) {
     );
   }
 
+  if (currentState === "FINAL_RESULT") {
+    return (
+      <Badge className="bg-emerald-700 text-white hover:bg-emerald-700">
+        Final Result
+      </Badge>
+    );
+  }
+
   return (
-    <Badge className="bg-emerald-700 text-white hover:bg-emerald-700">
-      Final Result
+    <Badge variant="destructive" className="bg-rose-600 text-white hover:bg-rose-600">
+      Error
     </Badge>
   );
 }
@@ -162,7 +197,7 @@ function ProcessingView() {
   );
 }
 
-function SuccessView({ data }: { data: ApiResponse }) {
+function SuccessView({ data }: { data: ApiResponse | null }) {
   if (!data || data.status !== "SUCCESS") {
     return <FallbackEmptyState />;
   }
@@ -237,7 +272,7 @@ function SuccessView({ data }: { data: ApiResponse }) {
   );
 }
 
-function FinalResultView({ data }: { data: ApiResponse }) {
+function FinalResultView({ data }: { data: ApiResponse | null }) {
   if (!data || data.status !== "SUCCESS") {
     return <FallbackEmptyState />;
   }
@@ -317,7 +352,7 @@ function NeedsInfoView({
   isLoading,
   onSubmitGaps,
 }: {
-  data: ApiResponse;
+  data: ApiResponse | null;
   isLoading?: boolean;
   onSubmitGaps: (answers: string[]) => void;
 }) {
@@ -350,7 +385,6 @@ function NeedsInfoView({
       alert("Please answer all diagnostic questions before continuing.");
       return;
     }
-
     onSubmitGaps(answers);
   };
 
@@ -395,6 +429,7 @@ function NeedsInfoView({
                   onChange={(e) => handleAnswerChange(index, e.target.value)}
                   placeholder="Provide your answer..."
                   className="min-h-[110px] border-slate-300 text-sm"
+                  disabled={isLoading}
                 />
               </div>
             ))
@@ -447,9 +482,7 @@ function OutputCard({
   return (
     <Card
       className={
-        highlight
-          ? "border-emerald-200 bg-emerald-50/40"
-          : "border-slate-200"
+        highlight ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200"
       }
     >
       <CardHeader className="pb-3">
@@ -476,7 +509,9 @@ function OutputCard({
 
       <CardContent>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="whitespace-pre-wrap text-sm leading-7 text-slate-800">{content}</p>
+          <p className="whitespace-pre-wrap text-sm leading-7 text-slate-800">
+            {content}
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -490,8 +525,8 @@ function BenchmarkMeter({ value }: { value: number }) {
     normalized >= 85
       ? "bg-emerald-600"
       : normalized >= 70
-      ? "bg-amber-500"
-      : "bg-rose-500";
+        ? "bg-amber-500"
+        : "bg-rose-500";
 
   return (
     <div className="space-y-3">
@@ -566,6 +601,20 @@ function FallbackEmptyState() {
       <h3 className="text-base font-semibold text-slate-900">No output available</h3>
       <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">
         The current state does not contain renderable output. Please rerun the workflow.
+      </p>
+    </div>
+  );
+}
+
+function ErrorView({ message }: { message: string | null | undefined }) {
+  return (
+    <div className="flex min-h-[520px] flex-col items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-6 py-10 text-center animate-in fade-in">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100">
+        <AlertCircle className="h-8 w-8 text-rose-600" />
+      </div>
+      <h3 className="text-lg font-semibold text-rose-900">Operation Failed</h3>
+      <p className="mt-2 max-w-sm text-sm leading-6 text-rose-700">
+        {message || "An unexpected error occurred while communicating with the server."}
       </p>
     </div>
   );
