@@ -161,7 +161,7 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
               ref={fileInputRef}
               id="casedepth-file-upload"
               type="file"
-              accept=".txt,.json,.csv,.jsonl,audio/*"
+              accept=".txt,.docx,.json,.csv,.jsonl,audio/*"
               onChange={handleFileInputChange}
               className="hidden"
               disabled={disableUpload}

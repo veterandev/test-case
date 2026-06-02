@@ -43,7 +43,7 @@ app.add_middleware(
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-TEXT_EXTENSIONS = {".txt", ".json", ".csv", ".jsonl"}
+TEXT_EXTENSIONS = {".txt", ".docx", ".json", ".csv", ".jsonl"}
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".webm", ".ogg", ".oga", ".flac", ".aac"}
 
 # -----------------------------
