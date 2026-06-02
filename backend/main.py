@@ -143,7 +143,7 @@ async def ai_test():
     transcription_error = None
 
     try:
-        with open("ad.oga", "rb") as f:
+        with open("test.oga", "rb") as f:
             tr_resp = client.audio.transcriptions.create(
                 model="gapgpt/whisper-1",
                 file=f
@@ -151,7 +151,7 @@ async def ai_test():
 
         transcript_text = getattr(tr_resp, "text", None)
     except FileNotFoundError:
-        transcription_error = "ad.oga not found in backend working directory"
+        transcription_error = "test.oga not found in backend working directory"
     except RateLimitError as e:
         transcription_error = f"Rate limited (429): {e}"
     except Exception as e:
