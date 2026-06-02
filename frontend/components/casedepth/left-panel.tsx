@@ -104,8 +104,8 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
     };
 
     recorder.onstop = async () => {
-      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-      const file = new File([blob], `recording-${Date.now()}.webm`, {
+      const blob = new Blob(chunksRef.current, { type: "audio/oga" });
+      const file = new File([blob], `recording-${Date.now()}.oga`, {
         type: blob.type,
       });
 
@@ -136,7 +136,7 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
           <div>
             <CardTitle>Intel Intake</CardTitle>
             <CardDescription>
-              Input and baseline narrative parameters for the current case.
+              Feed your Raw Executive Intel & Run Synthesizing Narrative …
             </CardDescription>
           </div>
           <Badge variant="secondary">MVP</Badge>
@@ -146,7 +146,7 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <label className="text-sm font-medium">Raw Executive Feed</label>
-          <Textarea
+        <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Paste raw executive input here..."
@@ -161,7 +161,7 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
               ref={fileInputRef}
               id="casedepth-file-upload"
               type="file"
-              accept=".txt,.md,.json,.csv,.log,.py,.js,.ts,.tsx,.jsonl,audio/*"
+              accept=".txt,.json,.csv,.jsonl,audio/*"
               onChange={handleFileInputChange}
               className="hidden"
               disabled={disableUpload}
@@ -233,6 +233,7 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
                 <option>Witty</option>
                 <option>Academic</option>
                 <option>Direct/Punchy</option>
+                <option>Inspirational</option>
               </select>
             </Field>
 
@@ -240,7 +241,7 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
               <Input
                 value={targetAudience}
                 onChange={(e) => setTargetAudience(e.target.value)}
-                placeholder="e.g. C-Levels"
+                placeholder="e.g. Financial C-Levels"
                 className="h-9 text-xs"
                 disabled={isLoading}
               />
@@ -255,7 +256,7 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
               >
                 <option>Public</option>
                 <option>Anonymize Identity</option>
-                <option>Fully Anonymize</option>
+                <option>Anonymize Identity & Metrics</option>
               </select>
             </Field>
 
@@ -263,7 +264,7 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
               <Input
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                placeholder="Optional"
+                placeholder="Optional Text"
                 className="h-9 text-xs"
                 disabled={isLoading}
               />
@@ -284,7 +285,7 @@ export function LeftPanel({ onSynthesize, isLoading }: LeftPanelProps) {
           </div>
         </div>
 
-        <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full">
+        <Button onClick={handleSubmit} disabled={!canSubmit} className="h-9 w-full">
           <WandSparkles className="mr-2 h-4 w-4" />
           {isLoading ? "Processing..." : "Synthesize Narrative"}
         </Button>

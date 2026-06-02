@@ -151,7 +151,7 @@ function IdleView() {
       <h3 className="text-lg font-semibold text-slate-900">Awaiting Input</h3>
       <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
         Submit raw text input to generate a structured narrative. If the source is incomplete,
-        the system will request diagnostic clarifications before finalization.
+        we will request diagnostic clarifications before finalization.
       </p>
 
       <div className="mt-6 grid w-full max-w-2xl grid-cols-1 gap-3 md:grid-cols-3">

@@ -9,18 +9,18 @@ from pathlib import Path
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-# Load .env (same folder as this file) - Windows friendly
 from dotenv import load_dotenv
+from openai import OpenAI
+
+from openai import RateLimitError
 
 load_dotenv(dotenv_path=Path(__file__).with_name(".env"))
 
-# OpenAI (created lazily to avoid import-time crash)
-from openai import OpenAI
-
 app = FastAPI(title="CaseDepth API", version="0.1.0")
 
-# Allow extra CORS origins via env (comma-separated)
+# -----------------------------
+# CORS
+# -----------------------------
 extra_origins = os.getenv("EXTRA_CORS_ORIGINS", "").strip()
 extra_origins_list = [o.strip() for o in extra_origins.split(",") if o.strip()]
 allowed_origins = [
@@ -37,16 +37,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# -----------------------------
+# Storage
+# -----------------------------
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-TEXT_EXTENSIONS = {
-    ".txt",
-    ".json",
-    ".csv",
-    ".jsonl",
-}
-
+TEXT_EXTENSIONS = {".txt", ".json", ".csv", ".jsonl"}
+AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".webm", ".ogg", ".oga", ".flac", ".aac"}
 
 # -----------------------------
 # Request Models
@@ -54,7 +52,7 @@ TEXT_EXTENSIONS = {
 class SynthesizeRequest(BaseModel):
     text: str = Field(..., min_length=1)
     format: Optional[str] = None
-    metadata: Optional[dict] = None  # keep compatible with your frontend changes
+    metadata: Optional[dict] = None
 
 
 class FinalizeRequest(BaseModel):
@@ -92,13 +90,14 @@ class UploadResponse(BaseModel):
     file_type: str
     file_path: str
     text_content: Optional[str] = None
+    transcription: Optional[str] = None
+    transcription_error: Optional[str] = None
 
 
+# -----------------------------
+# Helpers
+# -----------------------------
 def get_openai_client() -> Optional[OpenAI]:
-    """
-    Creates the OpenAI client only when needed.
-    Prevents uvicorn import-time crash if OPENAI_API_KEY is missing.
-    """
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
         return None
@@ -109,6 +108,10 @@ def get_openai_client() -> Optional[OpenAI]:
     )
 
 
+def safe_decode_text(data: bytes) -> str:
+    return data.decode("utf-8", errors="ignore")
+
+
 # -----------------------------
 # Routes
 # -----------------------------
@@ -116,11 +119,8 @@ def get_openai_client() -> Optional[OpenAI]:
 async def health():
     return {"status": "ok"}
 
-
-@app.get("/api/ai")
-async def ai():
-    await asyncio.sleep(0.2)
-
+@app.get("/api/ai_test")
+async def ai_test():
     client = get_openai_client()
     if client is None:
         raise HTTPException(
@@ -128,13 +128,52 @@ async def ai():
             detail="OPENAI_API_KEY is missing. Put it in backend/.env (next to main.py) or set env var.",
         )
 
-    response = client.chat.completions.create(
-        # model="gpt-4o-mini",
-        model="gemini-2.5-flash-lite",
-        messages=[{"role": "user", "content": "what do you do?"}],
-    )
-    return {"status": "SUCCESS", "content": response.choices[0].message.content}
+    # 1) chat test
+    try:
+        chat_resp = client.chat.completions.create(
+            model="gemini-2.5-flash-lite",
+            messages=[{"role": "user", "content": "what do you do?"}],
+        )
+        chat_text = chat_resp.choices[0].message.content
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"chat failed: {type(e).__name__}: {e}")
 
+    # 2) transcription test
+    transcript_text = None
+    transcription_error = None
+
+    try:
+        with open("ad.oga", "rb") as f:
+            tr_resp = client.audio.transcriptions.create(
+                model="gapgpt/whisper-1",
+                file=f
+            )
+
+        transcript_text = getattr(tr_resp, "text", None)
+    except FileNotFoundError:
+        transcription_error = "ad.oga not found in backend working directory"
+    except RateLimitError as e:
+        transcription_error = f"Rate limited (429): {e}"
+    except Exception as e:
+        transcription_error = f"transcription failed: {type(e).__name__}: {e}"
+
+    if tr_resp.status_code >= 400:
+        raise HTTPException(status_code=tr_resp.status_code, detail=tr_resp.text)
+
+    try:
+        payload = tr_resp.json()
+    except Exception:
+        payload = {"raw": tr_resp.text}
+
+    return {
+        "status": "SUCCESS",
+        "chat": chat_text,
+        "transcript": transcript_text,
+        "transcription_error": transcription_error,
+        "gateway_status_code": tr_resp.status_code,
+        "transcript": payload.get("text"),
+        "raw": payload,
+    }
 
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_file(file: UploadFile = File(...)):
@@ -149,8 +188,32 @@ async def upload_file(file: UploadFile = File(...)):
     file_path.write_bytes(contents)
 
     text_content = None
+    transcription = None
+    transcription_error = None
+
+    # text files
     if suffix in TEXT_EXTENSIONS:
-        text_content = contents.decode("utf-8", errors="ignore")
+        text_content = safe_decode_text(contents)
+
+    # audio transcription
+    elif suffix in AUDIO_EXTENSIONS:
+        client = get_openai_client()
+        if client is None:
+            transcription_error = "OPENAI_API_KEY is missing."
+        else:
+            try:
+                with open(file_path, "rb") as f:
+                    response = client.audio.transcriptions.create(
+                        model="gapgpt/whisper-1",
+                        file=f,
+                    )
+                transcription = response.text
+                text_content = transcription
+                print("Transcription text:", transcription)
+            except Exception as e:
+                # IMPORTANT: don't fail the whole upload if transcription breaks
+                transcription_error = f"{type(e).__name__}: {e}"
+                print("Transcription failed:", transcription_error)
 
     return UploadResponse(
         status="SUCCESS",
@@ -158,6 +221,8 @@ async def upload_file(file: UploadFile = File(...)):
         file_type=file.content_type or "application/octet-stream",
         file_path=str(file_path),
         text_content=text_content,
+        transcription=transcription,
+        transcription_error=transcription_error,
     )
 
 
@@ -165,7 +230,6 @@ async def upload_file(file: UploadFile = File(...)):
 async def synthesize(payload: SynthesizeRequest):
     await asyncio.sleep(0.5)
 
-    # Mock logic (random)
     if random.choice([True, False]):
         return SynthesizeSuccessResponse(
             status="SUCCESS",
