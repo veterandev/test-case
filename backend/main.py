@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from openai import OpenAI
-
 from openai import RateLimitError
 
 load_dotenv(dotenv_path=Path(__file__).with_name(".env"))
@@ -119,16 +118,17 @@ def safe_decode_text(data: bytes) -> str:
 async def health():
     return {"status": "ok"}
 
+
 @app.get("/api/ai_test")
 async def ai_test():
     client = get_openai_client()
     if client is None:
         raise HTTPException(
             status_code=500,
-            detail="OPENAI_API_KEY is missing. Put it in backend/.env (next to main.py) or set env var.",
+            detail="OPENAI_API_KEY is missing. Put it in backend/.env or set env var.",
         )
 
-    # 1) chat test
+    # chat test
     try:
         chat_resp = client.chat.completions.create(
             model="gemini-2.5-flash-lite",
@@ -138,17 +138,16 @@ async def ai_test():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"chat failed: {type(e).__name__}: {e}")
 
-    # 2) transcription test
     transcript_text = None
     transcription_error = None
+    tr_resp = None
 
     try:
         with open("test.oga", "rb") as f:
             tr_resp = client.audio.transcriptions.create(
                 model="gapgpt/whisper-1",
-                file=f
+                file=f,
             )
-
         transcript_text = getattr(tr_resp, "text", None)
     except FileNotFoundError:
         transcription_error = "test.oga not found in backend working directory"
@@ -157,23 +156,13 @@ async def ai_test():
     except Exception as e:
         transcription_error = f"transcription failed: {type(e).__name__}: {e}"
 
-    if tr_resp.status_code >= 400:
-        raise HTTPException(status_code=tr_resp.status_code, detail=tr_resp.text)
-
-    try:
-        payload = tr_resp.json()
-    except Exception:
-        payload = {"raw": tr_resp.text}
-
     return {
         "status": "SUCCESS",
         "chat": chat_text,
         "transcript": transcript_text,
         "transcription_error": transcription_error,
-        "gateway_status_code": tr_resp.status_code,
-        "transcript": payload.get("text"),
-        "raw": payload,
     }
+
 
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_file(file: UploadFile = File(...)):
@@ -191,13 +180,12 @@ async def upload_file(file: UploadFile = File(...)):
     transcription = None
     transcription_error = None
 
-    # text files
     if suffix in TEXT_EXTENSIONS:
         text_content = safe_decode_text(contents)
 
-    # audio transcription
     elif suffix in AUDIO_EXTENSIONS:
         client = get_openai_client()
+
         if client is None:
             transcription_error = "OPENAI_API_KEY is missing."
         else:
@@ -207,11 +195,12 @@ async def upload_file(file: UploadFile = File(...)):
                         model="gapgpt/whisper-1",
                         file=f,
                     )
+
                 transcription = response.text
                 text_content = transcription
                 print("Transcription text:", transcription)
+
             except Exception as e:
-                # IMPORTANT: don't fail the whole upload if transcription breaks
                 transcription_error = f"{type(e).__name__}: {e}"
                 print("Transcription failed:", transcription_error)
 
@@ -262,14 +251,18 @@ async def synthesize(payload: SynthesizeRequest):
 @app.post("/api/finalize", response_model=FinalizeSuccessResponse)
 async def finalize(payload: FinalizeRequest):
     await asyncio.sleep(0.5)
-    joined_answers = " | ".join([a.strip() for a in payload.answers if a.strip()])
+
+    clean_answers = [a.strip() for a in payload.answers if a.strip()]
+    joined_answers = " | ".join(clean_answers)
+
+    gap_summary = joined_answers if clean_answers else "No additional answers provided."
 
     return FinalizeSuccessResponse(
         status="SUCCESS",
         content=(
             "Synthesized Narrative (Final)\n\n"
             "Gap Resolution Summary:\n"
-            f"{joined_answers if joined_answers else 'No additional answers provided.'}\n\n"
+            f"{gap_summary}\n\n"
             "Final Narrative Draft:\n"
             "• Context: ...\n"
             "• Tension / Stakes: ...\n"
