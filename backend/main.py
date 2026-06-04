@@ -234,7 +234,6 @@ async def synthesize(payload: SynthesizeRequest):
         return SynthesizeSuccessResponse(
             status="SUCCESS",
             content=(
-                "The CaseDepth Blueprint\n\n"
                 f"Input Summary: {payload.text[:140].strip()}...\n\n"
                 "Narrative Draft:\n"
                 "• Executive Context: ...\n"

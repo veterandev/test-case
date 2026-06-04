@@ -143,7 +143,7 @@ function StatusBadge({ currentState }: { currentState: PanelState }) {
 
 function IdleView() {
   return (
-    <div className="flex min-h-[520px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10 text-center animate-in fade-in">
+    <div className="flex min-h-[480px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10 text-center animate-in fade-in">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
         <Sparkles className="h-7 w-7 text-slate-600" />
       </div>
@@ -224,7 +224,7 @@ function SuccessView({ data }: { data: ApiResponse | null }) {
         </div>
       </section>
 
-      <OutputCard title="Generated Narrative" content={data.content} />
+      <OutputCard title="The CaseDepth Blueprint" content={data.content} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Card className="border-slate-200 xl:col-span-1">

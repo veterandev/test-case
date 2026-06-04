@@ -172,7 +172,7 @@ export function AppShell() {
               <p className="mt-1 text-sm text-slate-600">
                 Elevating Raw Intel to Strategic Assets
               </p>
-              <p className="mt-1 text-xs text-slate-500">API: {API_BASE}</p>
+              {/* <p className="mt-1 text-xs text-slate-500">API: {API_BASE}</p> */}
             </div>
 
             <button
