@@ -76,6 +76,9 @@ export function RightPanel({
             )}
 
             {currentState === "FINAL_RESULT" && <FinalResultView data={data} />}
+            {currentState === "FINAL_RESULT_AFTER_GAP_FILLED" && (
+              <FinalResultAfterGapFilledView data={data} />
+            )}
 
             {currentState === "ERROR" && <ErrorView message={errorMessage} />}
 
@@ -129,6 +132,14 @@ function StatusBadge({ currentState }: { currentState: PanelState }) {
   if (currentState === "FINAL_RESULT") {
     return (
       <Badge className="bg-emerald-700 text-white hover:bg-emerald-700">
+        Final Result
+      </Badge>
+    );
+  }
+
+  if (currentState === "FINAL_RESULT_AFTER_GAP_FILLED") {
+    return (
+      <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100">
         Final Result
       </Badge>
     );
@@ -293,6 +304,84 @@ function FinalResultView({ data }: { data: ApiResponse | null }) {
               Final Narrative Ready
             </h3>
             <p className="mt-1 text-sm text-emerald-900/80">
+              Diagnostic gaps were bridged and the refined narrative is now available.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <OutputCard title="Final Refined Narrative" content={data.content} highlight />
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <Card className="border-slate-200 xl:col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base text-slate-900">
+              <BarChart3 className="h-4 w-4 text-slate-600" />
+              Final Benchmark
+            </CardTitle>
+            <CardDescription>Post-clarification quality indicator</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {score !== null ? (
+              <BenchmarkMeter value={score} />
+            ) : (
+              <p className="text-sm text-slate-500">No benchmark score provided.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 xl:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-slate-900">Completion Notes</CardTitle>
+            <CardDescription>Final workflow notes and recommendations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {directives.length > 0 ? (
+              <ul className="space-y-3">
+                {directives.map((directive, index) => (
+                  <li
+                    key={index}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700"
+                  >
+                    <span className="mr-2 font-semibold text-slate-900">{index + 1}.</span>
+                    {directive}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500">No completion notes returned.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function FinalResultAfterGapFilledView({ data }: { data: ApiResponse | null }) {
+  if (
+    !data ||
+    (data.status !== "FINAL_RESULT_AFTER_GAP_FILLED" && data.status !== "SUCCESS")
+  ) {
+    return null;
+  }
+
+  const score = data.benchmark_score ?? null;
+  const directives = data.directives ?? [];
+
+  return (
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2">
+      <section className="rounded-xl border border-violet-300 bg-violet-50 p-4">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 rounded-full bg-white p-2 shadow-sm">
+            <CheckCircle2 className="h-5 w-5 text-violet-700" />
+          </div>
+
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-violet-900">
+              Final Narrative Ready
+            </h3>
+            <p className="mt-1 text-sm text-violet-900/80">
               Diagnostic gaps were bridged and the refined narrative is now available.
             </p>
           </div>

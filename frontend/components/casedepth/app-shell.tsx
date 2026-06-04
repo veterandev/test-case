@@ -137,9 +137,9 @@ export function AppShell() {
         60_000
       );
 
-      if (data?.status === "SUCCESS") {
+      if (data?.status === "SUCCESS" || data?.status === "FINAL_RESULT_AFTER_GAP_FILLED") {
         setApiResponse(data);
-        setCurrentState("FINAL_RESULT");
+        setCurrentState("FINAL_RESULT_AFTER_GAP_FILLED");
         return;
       }
 

@@ -4,6 +4,7 @@ export type PanelState =
   | "SUCCESS"
   | "NEEDS_INFO"
   | "FINAL_RESULT"
+  | "FINAL_RESULT_AFTER_GAP_FILLED"
   | "ERROR";
 
 export type SuccessResponse = {
@@ -18,7 +19,25 @@ export type NeedsInfoResponse = {
   gaps: string[];
 };
 
-export type ApiResponse = SuccessResponse | NeedsInfoResponse;
+export type FinalResultAfterGapFilledResponse = {
+  status: "FINAL_RESULT_AFTER_GAP_FILLED";
+  content: string;
+  benchmark_score?: number;
+  directives?: string[];
+};
+
+export type FinalResultResponse = {
+  status: "SUCCESS";
+  content: string;
+  benchmark_score?: number;
+  directives?: string[];
+};
+
+export type ApiResponse =
+  | SuccessResponse
+  | NeedsInfoResponse
+  | FinalResultAfterGapFilledResponse
+  | FinalResultResponse;
 
 export type SynthesizePayload = {
   text: string;
