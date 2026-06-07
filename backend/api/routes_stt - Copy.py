@@ -1,25 +1,27 @@
-# backend/api/routes_stt.py
-
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from services.vosk_service import create_recognizer, process_chunk
+from services.vosk_service import create_recognizer, accept_audio
 
 router = APIRouter()
 
 @router.websocket("/ws/stt")
-async def websocket_stt(ws: WebSocket):
+async def stt_socket(ws: WebSocket):
 
     await ws.accept()
+
     recognizer = create_recognizer()
 
     try:
+
         while True:
 
             audio_bytes = await ws.receive_bytes()
 
-            result = process_chunk(recognizer, audio_bytes)
+            result = accept_audio(recognizer, audio_bytes)
 
             if result["text"]:
+
                 await ws.send_json(result)
 
     except WebSocketDisconnect:
-        pass
+
+        print("STT disconnected")

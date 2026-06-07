@@ -5,20 +5,10 @@ import { LeftPanel } from "./left-panel"
 import { RightPanel } from "./right-panel"
 import { ApiResponse, PanelState, SynthesizePayload } from "./casedepth-types"
 
-import {startDictation, stopDictation} from "@/services/dictation"
-import {insertIntoFocusedEditor} from "@/utils/insertText"
+import DictateButton from "@/components/casedepth/dictatebutton"
 
-let active = false;
-function toggleDictation(){
-    if(!active){
-        startDictation(insertIntoFocusedEditor);
-        active = true;
-    }else{
-        stopDictation();
-        active = false;
-    }
-}
-
+import { useEffect } from "react"
+import { trackEditorFocus } from "@/lib/utils/editor-focus"
 
 type FetchJsonError =
   | { name: "HTTP_ERROR"; message: string; status: number }
@@ -160,25 +150,37 @@ export function AppShell() {
     setCurrentState("IDLE")
   }
 
+  useEffect(() => {
+    trackEditorFocus()
+  }, [])
+
   return (
     <main className="min-h-screen flex flex-col">
-      <header className="border-b p-4 flex items-center justify-between">
+
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b p-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold">CaseDepth</h1>
           <p className="text-sm text-muted-foreground">
             Elevating Raw Intel to Strategic Assets
           </p>
         </div>
-        <button id="dictateBtn"className="dictate-btn" onClick={toggleDictation}>🎤 Dictate</button>
+
+        <DictateButton />
+
         <button onClick={handleReset}>Reset</button>
       </header>
 
-      <div className="flex flex-1 gap-4 p-4">
-        <div className="flex-1">
-          <LeftPanel onSynthesize={handleSynthesize} isLoading={isLoading} />
+      {/* فقط این padding-top اضافه شده */}
+      <div className="pt-24 flex flex-col md:flex-row flex-1 gap-4 p-4">
+
+        <div className="w-full md:flex-1">
+          <LeftPanel
+            onSynthesize={handleSynthesize}
+            isLoading={isLoading}
+          />
         </div>
 
-        <div className="flex-1">
+        <div className="w-full md:flex-1">
           <RightPanel
             currentState={currentState}
             data={apiResponse}
@@ -188,7 +190,9 @@ export function AppShell() {
             onReset={handleReset}
           />
         </div>
+
       </div>
+
     </main>
   )
 }

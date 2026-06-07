@@ -1,3 +1,5 @@
+# backend/services/vosk_service.py
+
 import json
 from vosk import Model, KaldiRecognizer
 
@@ -7,29 +9,17 @@ model = Model(MODEL_PATH)
 
 
 def create_recognizer():
-
     rec = KaldiRecognizer(model, 16000)
-    rec.SetWords(True)
-
+    rec.SetWords(False)
     return rec
 
 
-def accept_audio(recognizer, pcm):
+def process_chunk(recognizer, chunk: bytes):
 
-    if recognizer.AcceptWaveform(pcm):
-
-        res = json.loads(recognizer.Result())
-
-        return {
-            "type": "final",
-            "text": res.get("text", "")
-        }
+    if recognizer.AcceptWaveform(chunk):
+        result = json.loads(recognizer.Result())
+        return {"type": "final", "text": result.get("text", "")}
 
     else:
-
-        res = json.loads(recognizer.PartialResult())
-
-        return {
-            "type": "partial",
-            "text": res.get("partial", "")
-        }
+        partial = json.loads(recognizer.PartialResult())
+        return {"type": "partial", "text": partial.get("partial", "")}
