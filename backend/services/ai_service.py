@@ -73,19 +73,6 @@ def safe_json_parse(content: str):
         return None
 
 
-def classify_answer(text: str):
-
-    text = text.strip()
-
-    if len(text) > 80:
-        return "Fully Addressed"
-
-    if len(text) > 20:
-        return "Partial Response"
-
-    return "Sanity Warning"
-
-
 def build_synthesis_prompt(text, metadata, format):
 
     metadata = metadata or {}
@@ -120,7 +107,7 @@ def run_llm_synthesis(text, metadata, format):
 
         try:
             resp = openai_client.chat.completions.create(
-                model="gemini-2.5-flash-lite",
+                model="claude-sonnet-4-5-20250929",
                 messages=[
                     {"role": "system", "content": "Return ONLY valid JSON."},
                     {"role": "user", "content": prompt},
@@ -192,12 +179,20 @@ def run_llm_integration(session, answers):
         extra=json.dumps("Nothing"),
         Q_A=qa_json
     )
-    print("Prompt 2:", prompt)
+#    print("Prompt 2:", prompt)
+#    model="chatgpt-4o-latest", 15+5
+#    model="gpt-5.2-chat-latest",  14+2
+#    model="claude-3-7-sonnet-20250219",  15+3
+#    model="claude-sonnet-4-5-20250929",  15+3
+#    model="gemini-2.5-flash",  2.5+0.3
+#    model="gemini-2.5-flash-lite", 0.4+0.1
+#    model="gemini-2.5-pro", 20+2.5
+
 
     try:
 
         resp = openai_client.chat.completions.create(
-            model="gemini-2.5-flash-lite",
+            model="claude-sonnet-4-5-20250929",
             messages=[
                 {"role": "system", "content": "Return ONLY valid JSON."},
                 {"role": "user", "content": prompt},
@@ -246,11 +241,9 @@ def finalize_session(session_id, answers):
     if not session:
         return None
 
-    statuses = [classify_answer(a) for a in answers]
-
     llm_result = run_llm_integration(session, answers)
 
     if not llm_result:
-        return statuses, None
+        return None
 
-    return statuses, llm_result
+    return llm_result

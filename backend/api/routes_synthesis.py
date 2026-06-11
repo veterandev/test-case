@@ -1,4 +1,5 @@
 import asyncio
+import random
 
 from fastapi import APIRouter, HTTPException
 
@@ -30,7 +31,7 @@ async def synthesize(payload: SynthesizeRequest):
         payload.format,
     )
 
-    print("LLM_result:", llm_result)
+#    print("LLM_result:", llm_result)
     if llm_result:
 
         status = llm_result.get("Status")
@@ -40,7 +41,11 @@ async def synthesize(payload: SynthesizeRequest):
 
             draft = llm_result.get("Condition_B_Output", {}).get("Draft", "")
             scores = llm_result.get("Scores", {})
-            total_score = scores.get("Total", 80)
+            total_score = scores.get("Total", 40)*2
+
+            print("Draft:", draft)
+            print("scores:", scores)
+            print("TS:", total_score)
 
             return FinalResultResponse(
                 status="FINAL_RESULT",
@@ -72,27 +77,6 @@ async def synthesize(payload: SynthesizeRequest):
                 gaps=gaps,
             )
 
-    # fallback به رفتار فعلی (بدون تغییر)
-
-    if len(payload.text) > 400:
-
-        return FinalResultResponse(
-            status="FINAL_RESULT",
-            content=(
-                f"Input Summary: {payload.text[:140].strip()}...\n\n"
-                "Narrative Draft:\n"
-                "• Executive Context: ...\n"
-                "• Strategic Stakes: ...\n"
-                "• Decision Logic: ...\n"
-                "• Proof & Metrics: ...\n"
-            ),
-            benchmark_score=90,
-            directives=[
-                "Refine the executive framing.",
-                "Strengthen differentiation.",
-            ],
-        )
-
     session_id, gaps = create_gap_session(
         payload.text,
         payload.metadata,
@@ -114,22 +98,50 @@ async def finalize(payload: FinalizeRequest):
     if result is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    statuses, llm_output = result
+    llm_output = result
     draft = ""
     editorial = ""
 
     if llm_output:
         draft = llm_output.get("Content", {}).get("Rich_Draft", "")
+        title_or_hook = llm_output.get("Content", {}).get("Title_or_Hook", "")
+        outline_list = llm_output.get("Content", {}).get("Outline", [])
         editorial = llm_output.get("Evaluation", {}).get("Ghostwriter_Notes", "")
+        resault_satatus =  llm_output.get("Evaluation", {}).get("Status", "")
+        analysis_summary1 =  llm_output.get("Evaluation", {}).get("Analysis_Summary", "")
+        warnings_list =  llm_output.get("Evaluation", {}).get("Warnings", [])
+
+        outline1 = "\n".join(list(item.values())[0] for item in outline_list)
+        warnings1 = ", ".join(warnings_list)
         
+        if resault_satatus == "Satisfactory":
+            r_score = random.randint(80, 95)
+
+        elif resault_satatus == "Partial_Evasive":
+            r_score = random.randint(50, 75)
+
+        elif resault_satatus == "Sanity_Warning":
+            r_score = random.randint(15, 45)
+        else:
+            r_score = random.randint(40, 60)
+
     return FinalResultAfterGapFilledResponse(
         status="FINAL_RESULT_AFTER_GAP_FILLED",
+        session_id=payload.session_id,
+#       gap filling quality evaluation
+        gap_status=resault_satatus,
+        analysis_summary=analysis_summary1,
+        warnings=warnings1,
+        writer_note=editorial,
+#       output
+        title=title_or_hook,
         content=draft,
-        benchmark_score=94,
+        outline=outline1,
+#       output evaluation
+        benchmark_score=r_score,
         directives=[
             "Verify anonymization level against NDA setting.",
             "Run final editorial polish.",
-        ],
-        editorial_brief=editorial,
-        gap_status=statuses,
+        ]
     )
+

@@ -15,6 +15,7 @@ class FinalizeRequest(BaseModel):
 
 class SynthesizeSuccessResponse(BaseModel):
     status: Literal["SUCCESS"]
+    session_id: str
     content: str
     benchmark_score: int = Field(ge=0, le=100)
     directives: List[str]
@@ -28,6 +29,7 @@ class SynthesizeNeedsInfoResponse(BaseModel):
 
 class FinalResultResponse(BaseModel):
     status: Literal["FINAL_RESULT"]
+    session_id: str
     content: str
     benchmark_score: int
     directives: List[str]
@@ -35,12 +37,16 @@ class FinalResultResponse(BaseModel):
 
 class FinalResultAfterGapFilledResponse(BaseModel):
     status: Literal["FINAL_RESULT_AFTER_GAP_FILLED"]
+    session_id: str
+    gap_status: str
+    analysis_summary: str
+    warnings: str
+    writer_note: str
+    title: str
+    outline: str
     content: str
     benchmark_score: int
     directives: List[str]
-    editorial_brief: str
-    gap_status: List[str]
-
 
 class UploadResponse(BaseModel):
     status: Literal["SUCCESS"]

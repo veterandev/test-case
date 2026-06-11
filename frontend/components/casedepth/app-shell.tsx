@@ -89,16 +89,16 @@ export function AppShell() {
         body: JSON.stringify(payload),
       })
 
-      if (data.status === "SUCCESS") {
+      if (data.status === "FINAL_RESULT") {
         setApiResponse(data)
-        setCurrentState("SUCCESS")
+        setCurrentState("FINAL_RESULT")
       } else if (data.status === "NEEDS_INFO") {
         setSessionId(data.session_id)
         setApiResponse(data)
         setCurrentState("NEEDS_INFO")
-      } else if (data.status === "FINAL_RESULT") {
+      } else if (data.status === "FINAL_RESULT_AFTER_GAP_FILLED") {
         setApiResponse(data)
-        setCurrentState("FINAL_RESULT")
+        setCurrentState("FINAL_RESULT_AFTER_GAP_FILLED")
       } else {
         throw {
           name: "INVALID_JSON",
@@ -129,11 +129,12 @@ export function AppShell() {
 
       if (data.status === "FINAL_RESULT_AFTER_GAP_FILLED") {
         setApiResponse(data)
+        console.log(data)
         setCurrentState("FINAL_RESULT_AFTER_GAP_FILLED")
       } else {
         throw {
           name: "INVALID_JSON",
-          message: "Invalid response shape from finalize.",
+          message: "Invalid response from finalize.",
         }
       }
     } catch (err: any) {

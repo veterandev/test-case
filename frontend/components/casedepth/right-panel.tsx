@@ -65,8 +65,6 @@ export function RightPanel({
 
             {currentState === "PROCESSING" && <ProcessingView />}
 
-            {currentState === "SUCCESS" && <SuccessView data={data} />}
-
             {currentState === "NEEDS_INFO" && (
               <NeedsInfoView
                 data={data}
@@ -117,14 +115,6 @@ function StatusBadge({ currentState }: { currentState: PanelState }) {
     return (
       <Badge className="bg-amber-500 text-white hover:bg-amber-500">
         Needs Info
-      </Badge>
-    );
-  }
-
-  if (currentState === "SUCCESS") {
-    return (
-      <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
-        Synthesized
       </Badge>
     );
   }
@@ -208,83 +198,9 @@ function ProcessingView() {
   );
 }
 
-function SuccessView({ data }: { data: ApiResponse | null }) {
-  if (!data || data.status !== "SUCCESS") {
-    return <FallbackEmptyState />;
-  }
-
-  const score = data.benchmark_score ?? null;
-  const directives = data.directives ?? [];
-
-  return (
-    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2">
-      <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 rounded-full bg-white p-2 shadow-sm">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-          </div>
-
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-800">
-              Synthesis Complete
-            </h3>
-            <p className="mt-1 text-sm text-emerald-900/80">
-              A structured narrative has been generated successfully.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <OutputCard title="The CaseDepth Blueprint" content={data.content} />
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Card className="border-slate-200 xl:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base text-slate-900">
-              <BarChart3 className="h-4 w-4 text-slate-600" />
-              Benchmark
-            </CardTitle>
-            <CardDescription>Relative confidence / quality indicator</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {score !== null ? (
-              <BenchmarkMeter value={score} />
-            ) : (
-              <p className="text-sm text-slate-500">No benchmark score provided.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 xl:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base text-slate-900">Refinement Directives</CardTitle>
-            <CardDescription>Recommended improvements and next actions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {directives.length > 0 ? (
-              <ul className="space-y-3">
-                {directives.map((directive, index) => (
-                  <li
-                    key={index}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700"
-                  >
-                    <span className="mr-2 font-semibold text-slate-900">{index + 1}.</span>
-                    {directive}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">No directives returned.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
 function FinalResultView({ data }: { data: ApiResponse | null }) {
-  if (!data || data.status !== "SUCCESS") {
+  console.log(data?.status);
+  if (!data || data.status !== "FINAL_RESULT") {
     return <FallbackEmptyState />;
   }
 
@@ -361,7 +277,7 @@ function FinalResultView({ data }: { data: ApiResponse | null }) {
 function FinalResultAfterGapFilledView({ data }: { data: ApiResponse | null }) {
   if (
     !data ||
-    (data.status !== "FINAL_RESULT_AFTER_GAP_FILLED" && data.status !== "SUCCESS")
+    (data.status !== "FINAL_RESULT_AFTER_GAP_FILLED")
   ) {
     return null;
   }
@@ -369,26 +285,58 @@ function FinalResultAfterGapFilledView({ data }: { data: ApiResponse | null }) {
   const score = data.benchmark_score ?? null;
   const directives = data.directives ?? [];
 
+  var color1:string= 'violet';
+  if (data.gap_status == 'Satisfactory') {
+    color1 = 'green';
+  }
+  if (data.gap_status == 'Partial_Evasive') {
+    color1 = 'yellow';
+  }
+  if (data.gap_status == 'Sanity_Warning') {
+    color1 = 'red';
+  }
+
+  var gap_evaluation:string= 'well done';
+  gap_evaluation = "Analysis Summary: \n" + data.analysis_summary + "\n\nWarnings:\n" + data.warnings + "\n\nWriter Note:\n" + data.writer_note;
+
   return (
     <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2">
-      <section className="rounded-xl border border-violet-300 bg-violet-50 p-4">
+{/*       <section className={"rounded-xl border border-violet-300 bg-"+color1+"-50 p-4"}>
         <div className="flex items-start gap-3">
           <div className="mt-0.5 rounded-full bg-white p-2 shadow-sm">
             <CheckCircle2 className="h-5 w-5 text-violet-700" />
           </div>
 
           <div className="flex-1">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-violet-900">
-              Final Narrative Ready
+            <h3 className={"text-sm font-semibold uppercase tracking-wide text-violet-900"}>
+              Gap Filling Quallity: {data.gap_status}
             </h3>
+            <p className="mt-1 text-sm font-semibold text-violet-900/80"> </p>
+            <p className="mt-1 text-sm font-semibold text-violet-900/80">
+              Analysis Summary:
+            </p>
             <p className="mt-1 text-sm text-violet-900/80">
-              Diagnostic gaps were bridged and the refined narrative is now available.
+              {data.analysis_summary}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-violet-900/80">
+              Warnings:
+            </p>
+            <p className="mt-1 text-sm text-violet-900/80">
+              {data.warnings}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-violet-900/80">
+              Writer Note:
+            </p>
+            <p className="mt-1 text-sm text-violet-900/80">
+              {data.writer_note}
             </p>
           </div>
         </div>
-      </section>
+      </section> */}
 
-      <OutputCard title="Final Refined Narrative" content={data.content} highlight />
+      <OutputCard title={"Gap Filling Quallity: "+data.gap_status+""} desc="Evaluation resault for your answer to fill the gaps" content={gap_evaluation} color1={color1} highlight />
+
+      <OutputCard title="Final Refined Narrative after Gap Filling" desc="Generated textual output from the synthesis pipeline" content={data.content} color1={color1} highlight />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Card className="border-slate-200 xl:col-span-1">
@@ -551,11 +499,15 @@ function NeedsInfoView({
 
 function OutputCard({
   title,
+  desc,
   content,
+  color1,
   highlight = false,
 }: {
   title: string;
+  desc: string;
   content: string;
+  color1: string;
   highlight?: boolean;
 }) {
   const handleCopy = async () => {
@@ -568,18 +520,21 @@ function OutputCard({
     }
   };
 
+  const colorClasses: Record<string, string> = {
+    red: "border-red-200 bg-red-100/40",
+    orange: "border-blue-200 bg-orange-100/40",
+    yellow: "border-blue-200 bg-yellow-100/40",
+    green: "border-green-200 bg-green-100/40",
+  };
+
   return (
-    <Card
-      className={
-        highlight ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200"
-      }
-    >
+    <Card className={colorClasses[color1] ?? "border-gray-200 bg-gray-50/40"}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base text-slate-900">{title}</CardTitle>
             <CardDescription>
-              Generated textual output from the synthesis pipeline
+              {desc}
             </CardDescription>
           </div>
 

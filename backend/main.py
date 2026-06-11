@@ -8,6 +8,14 @@ if current_dir not in sys.path:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from db.base import Base
+from db.session import engine
+
+import models
+
+from api.auth_api import router as auth_router
+from api.case_api import router as case_router
+
 from core import config
 
 from api.routes_health import router as health_router
@@ -26,11 +34,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+Base.metadata.create_all(bind=engine)
+
 app.include_router(health_router)
 app.include_router(ai_test_router)
 app.include_router(upload_router)
 app.include_router(synthesis_router)
 app.include_router(stt_router)
+app.include_router(auth_router)
+app.include_router(case_router)
 
 if __name__ == "__main__":
     import uvicorn

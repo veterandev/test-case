@@ -1,4 +1,5 @@
 import os
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -8,6 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_GPT4O_MODEL = os.getenv("OPENAI_GPT4O_MODEL", "").strip()
 
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -31,3 +33,25 @@ openai_client = (
     if OPENAI_API_KEY
     else None
 )
+
+
+load_dotenv()
+
+models_raw = os.getenv("AI_MODELS")
+
+if models_raw:
+    try:
+        AI_MODELS = json.loads(models_raw)
+        
+        for m in AI_MODELS:
+            print(f"Model2: {m['model']} | In: ${m['in']}/M | Out: ${m['out']}/M")
+            
+    except json.JSONDecodeError as e:
+        print("Error parsing AI_MODELS JSON:", e)
+        AI_MODELS = []
+else:
+    print("AI_MODELS is not defined in env")
+    AI_MODELS = []
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./case_depth.db")
+SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", 12))

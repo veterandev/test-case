@@ -1,19 +1,19 @@
 export type PanelState =
   | "IDLE"
   | "PROCESSING"
-  | "SUCCESS"
+  | "USER_REVIEW"
   | "NEEDS_INFO"
   | "FINAL_RESULT"
   | "FINAL_RESULT_AFTER_GAP_FILLED"
   | "ERROR"
 
 export type GapStatus =
-  | "Fully Addressed"
-  | "Partial Response"
-  | "Sanity Warning"
+  | "Satisfactory"
+  | "Partial_Evasive"
+  | "Sanity_Warning"
 
 export type SuccessResponse = {
-  status: "SUCCESS"
+  status: "SUCCESS1"
   content: string
   benchmark_score?: number
   directives?: string[]
@@ -34,11 +34,16 @@ export type FinalResultResponse = {
 
 export type FinalResultAfterGapFilledResponse = {
   status: "FINAL_RESULT_AFTER_GAP_FILLED"
+  session_id: string
+  title_or_hook?: string
+  outline?: string
   content: string
+  gap_status: string
+  analysis_summary: string
+  warnings?: string
+  writer_note?: string
   benchmark_score?: number
   directives?: string[]
-  editorial_brief?: string
-  gap_status?: GapStatus[]
 }
 
 export type ApiResponse =
