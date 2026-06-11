@@ -104,7 +104,7 @@ Regardless of the Evaluation Status (even if it is 'Sanity_Warning'), you MUST g
 Return STRICTLY as a valid JSON object. Do not include markdown formatting.
 {
   "Evaluation": {
-    "Status": "Satisfactory OR Partial/Evasive OR Sanity_Warning",
+    "Status": "Satisfactory OR Partial_Evasive OR Sanity_Warning",
     "Analysis_Summary": "Briefly explain why this status was chosen (Max 2 sentences).",
     "Warnings": ["List any contradictions or logical issues found in the answers"],
     "Ghostwriter_Notes": "Specific advice for the human editor on how to fix remaining gaps."

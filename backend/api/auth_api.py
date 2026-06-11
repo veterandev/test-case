@@ -40,7 +40,8 @@ def get_me(session=Depends(get_current_session)):
         "user": {
             "id": user.id,
             "name": user.name,
-            "avatar": user.avatar_url
+            "avatar": f"https://ui-avatars.com/api/?name={user.name}"
+#            "avatar": user.avatar_url
         }
     }
 

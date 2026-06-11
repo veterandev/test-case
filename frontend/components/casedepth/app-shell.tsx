@@ -3,12 +3,21 @@
 import { useMemo, useState } from "react"
 import { LeftPanel } from "./left-panel"
 import { RightPanel } from "./right-panel"
+import { UserAvatar } from "./user-avatar"
+
 import { ApiResponse, PanelState, SynthesizePayload } from "./casedepth-types"
 
+import logo from "@/assets/logo.png"
+import Image from "next/image"
 import DictateButton from "@/components/casedepth/dictatebutton"
 
 import { useEffect } from "react"
 import { trackEditorFocus } from "@/lib/utils/editor-focus"
+
+type UserInfo = {
+  name: string
+  avatar?: string
+}
 
 type FetchJsonError =
   | { name: "HTTP_ERROR"; message: string; status: number }
@@ -75,6 +84,12 @@ export function AppShell() {
     return base.replace(/\/$/, "")
   }, [])
 
+  
+  const [user, setUser] = useState<UserInfo | null>({
+    name: "Alireza",
+    avatar: "/logo.png" // یا آدرس یک عکس آنلاین برای تست: "https://github.com/shadcn.png"
+  });
+  
   async function handleSynthesize(payload: SynthesizePayload) {
     setCurrentState("PROCESSING")
     setApiResponse(null)
@@ -153,7 +168,16 @@ export function AppShell() {
 
   useEffect(() => {
     trackEditorFocus()
-  }, [])
+    // شبیه‌سازی لود شدن کاربر پس از ۱ ثانیه
+    const timer = setTimeout(() => {
+      setUser({
+        name: "Guest User",
+        avatar: "/logo.png" 
+      });
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -168,7 +192,24 @@ export function AppShell() {
 
         <DictateButton />
 
-        <button onClick={handleReset}>Reset</button>
+        <div className="flex items-center gap-3">
+          
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Guest</span>
+              <Image
+                src={logo}
+                alt="avatar"
+                width={48}
+                height={48}
+                className="rounded-full border"
+              />
+            </div>
+
+          {/* <UserAvatar user={user} /> */}
+          
+          {/* <button onClick={handleReset} className="text-sm border px-3 py-1 rounded">Reset</button> */}
+        </div>
+
       </header>
 
       {/* فقط این padding-top اضافه شده */}
