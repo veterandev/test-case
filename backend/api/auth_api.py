@@ -1,11 +1,12 @@
 # auth_api.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from fastapi.responses import JSONResponse
-from api.deps import get_current_session
+from fastapi.responses import JSONResponse, RedirectResponse
+
+from api.deps import get_current_session, get_optional_session
 
 from api.deps import get_db
-from services.auth_service import login_with_qr
+from services.auth_service import login_with_qr, user_info
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -17,8 +18,18 @@ def qr_login(key: str, db: Session = Depends(get_db)):
 
     if not token:
         return {"error": "invalid key"}
-
     response = JSONResponse({"status": "ok"})
+
+    # if not token:
+    #     return RedirectResponse(
+    #         url="http://127.0.0.1:3000/login-failed",
+    #         status_code=302
+    #     )
+
+    # response = RedirectResponse(
+    #     url="http://127.0.0.1:3000",
+    #     status_code=302
+    # )
 
     response.set_cookie(
         key="session_token",
@@ -31,17 +42,42 @@ def qr_login(key: str, db: Session = Depends(get_db)):
     return response
 
 @router.get("/me")
-def get_me(session=Depends(get_current_session)):
+async def get_me(
+    session=Depends(get_optional_session),
+    db: Session = Depends(get_db)):
+    if not session:
+        return {
+            "authenticated": False,
+            "user": {
+                "id": 1234,
+                "user_name": "Guest1",
+                "user_role": "Guest",
+                "avatar": "https://ui-avatars.com/api/?name=Guest"
+            }
+        }
 
-    user = session.user
+    user_id = session.user_id
+    print("session.user_id:",session.user_id)
+    user = user_info(db, user_id)
+
+    if not user:
+        return {
+            "authenticated": False,
+            "user": {
+                "id": 1234,
+                "user_name": "Guest2",
+                "user_role": "Guest",
+                "avatar": "https://ui-avatars.com/api/?name=Guest"
+            }
+        }
 
     return {
         "authenticated": True,
         "user": {
-            "id": user.id,
-            "name": user.name,
-            "avatar": f"https://ui-avatars.com/api/?name={user.name}"
-#            "avatar": user.avatar_url
+            "id": user_id,
+            "user_name": user.full_name,
+            "user_role": user.role,
+            "avatar": f"https://ui-avatars.com/api/?name={user.full_name}"
         }
     }
 

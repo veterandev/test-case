@@ -16,3 +16,17 @@ def login_with_qr(db: Session, key: str):
     session = create_session(db, user.id)
 
     return session.token
+
+def user_info(db: Session, id: int):
+
+    user = db.query(User).filter(
+        User.id == id
+    ).first()
+
+    print("user_info:", user)
+
+    if not user:
+        return None
+
+    return user
+

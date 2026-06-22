@@ -6,16 +6,22 @@ from fastapi import APIRouter, HTTPException
 from models.schemas import (
     SynthesizeRequest,
     FinalizeRequest,
+    AnswerRequest,
     SynthesizeNeedsInfoResponse,
+    AnswerResponse,
     FinalResultResponse,
     FinalResultAfterGapFilledResponse,
 )
 
 from services.ai_service import (
     create_gap_session,
-    finalize_session,
+    finalize_after_gap_session,
+    answer_session,
+    finalize_output_session,
     run_llm_synthesis,
 )
+
+from services.session_store import sessions
 
 router = APIRouter()
 
@@ -47,8 +53,19 @@ async def synthesize(payload: SynthesizeRequest):
             print("scores:", scores)
             print("TS:", total_score)
 
+            final_result = finalize_output_session(
+                draft,
+                payload.metadata,
+                payload.format,
+            )
+            if final_result is None:
+                raise HTTPException(status_code=404, detail="Session not found")
+            else:
+                print("Final Resault:", final_result)
+
             return FinalResultResponse(
                 status="FINAL_RESULT",
+                session_id="direct-finalize",
                 content=draft,
                 benchmark_score=total_score,
                 directives=[
@@ -93,7 +110,7 @@ async def synthesize(payload: SynthesizeRequest):
 @router.post("/api/finalize")
 async def finalize(payload: FinalizeRequest):
 
-    result = finalize_session(payload.session_id, payload.answers)
+    result = finalize_after_gap_session(payload.session_id, payload.answers)
 
     if result is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -101,6 +118,11 @@ async def finalize(payload: FinalizeRequest):
     llm_output = result
     draft = ""
     editorial = ""
+    resault_satatus = ""
+    analysis_summary1 = ""
+    warnings1 = ""
+    title_or_hook = ""
+    outline1 = ""
 
     if llm_output:
         draft = llm_output.get("Content", {}).get("Rich_Draft", "")
@@ -125,6 +147,20 @@ async def finalize(payload: FinalizeRequest):
         else:
             r_score = random.randint(40, 60)
 
+        session = sessions.get(payload.session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        final_result = finalize_output_session(
+            draft,
+            session.get("metadata"),
+            session.get("format"),
+        )
+        if final_result is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        else:
+            print("Final Polished Resault:", final_result)
+
     return FinalResultAfterGapFilledResponse(
         status="FINAL_RESULT_AFTER_GAP_FILLED",
         session_id=payload.session_id,
@@ -143,5 +179,26 @@ async def finalize(payload: FinalizeRequest):
             "Verify anonymization level against NDA setting.",
             "Run final editorial polish.",
         ]
+    )
+
+
+@router.post("/api/answer")
+async def answer(payload: AnswerRequest):
+
+    result = answer_session(payload.session_id, payload.rbp)
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    llm_output = result
+
+    if llm_output:
+        mock_answers = [item["Mock_Answer"] for item in llm_output["Mock_Questions_and_Answers"]]
+
+    print("Answers",mock_answers)
+    return AnswerResponse(
+        status="ANSWERS",
+        session_id=payload.session_id,
+        answers=mock_answers
     )
 

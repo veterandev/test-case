@@ -23,6 +23,7 @@ from api.routes_upload import router as upload_router
 from api.routes_ai_test import router as ai_test_router
 from api.routes_synthesis import router as synthesis_router
 from api.routes_stt import router as stt_router
+from api.process_api import router as process_router
 
 app = FastAPI(title="CaseDepth API", version="2.0.0")
 
@@ -43,6 +44,7 @@ app.include_router(synthesis_router)
 app.include_router(stt_router)
 app.include_router(auth_router)
 app.include_router(case_router)
+app.include_router(process_router)
 
 if __name__ == "__main__":
     import uvicorn

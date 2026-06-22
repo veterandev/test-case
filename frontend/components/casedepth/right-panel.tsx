@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import {
   AlertCircle,
   BarChart3,
@@ -29,8 +30,12 @@ interface RightPanelProps {
   data: ApiResponse | null;
   isLoading?: boolean;
   onSubmitGaps: (answers: string[]) => void;
+  onSubmitAnswer: (rbp: string) => void;
   errorMessage?: string | null;
+  onAnswer?: () => void;
   onReset?: () => void;
+  gapAnswers: string[];
+  setGapAnswers: Dispatch<SetStateAction<string[]>>;
 }
 
 export function RightPanel({
@@ -38,8 +43,12 @@ export function RightPanel({
   data,
   isLoading = false,
   onSubmitGaps,
+  onSubmitAnswer,
   errorMessage,
+  onAnswer,
   onReset,
+  gapAnswers,
+  setGapAnswers,
 }: RightPanelProps) {
   return (
     <Card className="h-full min-h-[640px] border-slate-200 bg-white shadow-sm">
@@ -70,6 +79,9 @@ export function RightPanel({
                 data={data}
                 isLoading={isLoading}
                 onSubmitGaps={onSubmitGaps}
+                onSubmitAnswer={onSubmitAnswer}
+                gapAnswers={gapAnswers}
+                setGapAnswers={setGapAnswers}
               />
             )}
 
@@ -275,64 +287,35 @@ function FinalResultView({ data }: { data: ApiResponse | null }) {
 }
 
 function FinalResultAfterGapFilledView({ data }: { data: ApiResponse | null }) {
-  if (
-    !data ||
-    (data.status !== "FINAL_RESULT_AFTER_GAP_FILLED")
-  ) {
+  if (!data || data.status !== "FINAL_RESULT_AFTER_GAP_FILLED") {
     return null;
   }
 
   const score = data.benchmark_score ?? null;
   const directives = data.directives ?? [];
 
-  var color1:string= 'violet';
-  if (data.gap_status == 'Satisfactory') {
-    color1 = 'green';
+  let color1: string = "violet";
+  if (data.gap_status == "Satisfactory") {
+    color1 = "green";
   }
-  if (data.gap_status == 'Partial_Evasive') {
-    color1 = 'yellow';
+  if (data.gap_status == "Partial_Evasive") {
+    color1 = "yellow";
   }
-  if (data.gap_status == 'Sanity_Warning') {
-    color1 = 'red';
+  if (data.gap_status == "Sanity_Warning") {
+    color1 = "red";
   }
 
-  var gap_evaluation:string= 'well done';
-  gap_evaluation = "Analysis Summary: \n" + data.analysis_summary + "\n\nWarnings:\n" + data.warnings + "\n\nWriter Note:\n" + data.writer_note;
+  let gap_evaluation: string = "well done";
+  gap_evaluation =
+    "Analysis Summary: \n" +
+    data.analysis_summary +
+    "\n\nWarnings:\n" +
+    data.warnings +
+    "\n\nWriter Note:\n" +
+    data.writer_note;
 
   return (
     <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2">
-{/*       <section className={"rounded-xl border border-violet-300 bg-"+color1+"-50 p-4"}>
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 rounded-full bg-white p-2 shadow-sm">
-            <CheckCircle2 className="h-5 w-5 text-violet-700" />
-          </div>
-
-          <div className="flex-1">
-            <h3 className={"text-sm font-semibold uppercase tracking-wide text-violet-900"}>
-              Gap Filling Quallity: {data.gap_status}
-            </h3>
-            <p className="mt-1 text-sm font-semibold text-violet-900/80"> </p>
-            <p className="mt-1 text-sm font-semibold text-violet-900/80">
-              Analysis Summary:
-            </p>
-            <p className="mt-1 text-sm text-violet-900/80">
-              {data.analysis_summary}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-violet-900/80">
-              Warnings:
-            </p>
-            <p className="mt-1 text-sm text-violet-900/80">
-              {data.warnings}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-violet-900/80">
-              Writer Note:
-            </p>
-            <p className="mt-1 text-sm text-violet-900/80">
-              {data.writer_note}
-            </p>
-          </div>
-        </div>
-      </section> */}
 
       <OutputCard title={"Gap Filling Quallity: "+data.gap_status+""} desc="Evaluation resault for your answer to fill the gaps" content={gap_evaluation} color1={color1} highlight />
 
@@ -388,24 +371,28 @@ function NeedsInfoView({
   data,
   isLoading,
   onSubmitGaps,
+  onSubmitAnswer,
+  gapAnswers,
+  setGapAnswers,
 }: {
   data: ApiResponse | null;
   isLoading?: boolean;
   onSubmitGaps: (answers: string[]) => void;
+  onSubmitAnswer: (rbp: string) => void;
+  gapAnswers: string[];
+  setGapAnswers: Dispatch<SetStateAction<string[]>>;
 }) {
   const gaps = useMemo(() => {
     if (!data || data.status !== "NEEDS_INFO") return [];
     return data.gaps ?? [];
   }, [data]);
 
-  const [answers, setAnswers] = useState<string[]>([]);
-
   useEffect(() => {
-    setAnswers(gaps.map(() => ""));
-  }, [gaps]);
+    setGapAnswers(gaps.map(() => ""));
+  }, [gaps, setGapAnswers]);
 
   const handleAnswerChange = (index: number, value: string) => {
-    setAnswers((prev) => {
+    setGapAnswers((prev) => {
       const next = [...prev];
       next[index] = value;
       return next;
@@ -414,15 +401,24 @@ function NeedsInfoView({
 
   const isComplete =
     gaps.length > 0 &&
-    answers.length === gaps.length &&
-    answers.every((answer) => answer.trim().length > 0);
+    gapAnswers.length === gaps.length &&
+    gapAnswers.every((answer) => answer.trim().length > 0);
 
   const handleSubmit = () => {
     if (!isComplete) {
       alert("Please answer all diagnostic questions before continuing.");
       return;
     }
-    onSubmitGaps(answers);
+    onSubmitGaps(gapAnswers);
+  };
+
+  const handleAnswer = () => {
+    if (isComplete) {
+      alert("All the questions have been answered.");
+      return;
+    }
+    console.log("answer btn ...");
+    onSubmitAnswer("Evasive");
   };
 
   return (
@@ -462,7 +458,7 @@ function NeedsInfoView({
                   {index + 1}. {gap}
                 </label>
                 <Textarea
-                  value={answers[index] ?? ""}
+                  value={gapAnswers[index] ?? ""}
                   onChange={(e) => handleAnswerChange(index, e.target.value)}
                   placeholder="Provide your answer..."
                   className="min-h-[110px] border-slate-300 text-sm"
@@ -490,6 +486,24 @@ function NeedsInfoView({
                 </>
               )}
             </Button>
+
+            <Button
+              onClick={handleAnswer}
+              disabled={isComplete || isLoading}
+              className="gap-2 bg-green-600 text-white hover:bg-green-700"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Answering...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Answer the Gaps
+                </>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -507,7 +521,7 @@ function OutputCard({
   title: string;
   desc: string;
   content: string;
-  color1: string;
+  color1?: string;
   highlight?: boolean;
 }) {
   const handleCopy = async () => {
@@ -533,9 +547,7 @@ function OutputCard({
         <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base text-slate-900">{title}</CardTitle>
-            <CardDescription>
-              {desc}
-            </CardDescription>
+            <CardDescription>{desc}</CardDescription>
           </div>
 
           <Button
@@ -621,7 +633,7 @@ function MiniInfoCard({
   title,
   description,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
 }) {

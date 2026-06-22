@@ -33,3 +33,24 @@ def get_current_session(
         raise HTTPException(status_code=401, detail="Session expired")
 
     return session
+
+
+def get_optional_session(
+    session_token: str = Cookie(None),
+    db: Session = Depends(get_db)
+):
+    print("session_token:",session_token)
+    
+    if not session_token:
+        return None
+
+    session = db.query(UserSession).filter(
+        UserSession.token == session_token
+    ).first()
+
+    print("session:",session)
+
+    if not session:
+        return None
+
+    return session

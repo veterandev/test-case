@@ -5,7 +5,7 @@ import time
 
 from core.config import openai_client
 from services.session_store import sessions
-from prompts.prompts import render_prompt, SYNTHESIS_PROMPT, INTEGRATING_PROMPT, FINALIZE_PROMPT
+from prompts.prompts import render_prompt, SYNTHESIS_PROMPT, INTEGRATING_PROMPT, ANSWERING_PROMPT, FINALIZE_PROMPT
 from models.llm_schemas import SynthesisDecision
 from pydantic import ValidationError
 
@@ -107,7 +107,7 @@ def run_llm_synthesis(text, metadata, format):
 
         try:
             resp = openai_client.chat.completions.create(
-                model="claude-sonnet-4-5-20250929",
+                model="gemini-2.5-flash",
                 messages=[
                     {"role": "system", "content": "Return ONLY valid JSON."},
                     {"role": "user", "content": prompt},
@@ -192,7 +192,7 @@ def run_llm_integration(session, answers):
     try:
 
         resp = openai_client.chat.completions.create(
-            model="claude-sonnet-4-5-20250929",
+            model="gemini-2.5-flash",
             messages=[
                 {"role": "system", "content": "Return ONLY valid JSON."},
                 {"role": "user", "content": prompt},
@@ -211,6 +211,95 @@ def run_llm_integration(session, answers):
     except Exception as e:
 
         print("Integration LLM error:", e)
+        return None
+
+def run_llm_finalize_output(text, metadata, format=None):
+    metadata = metadata or {}
+
+    prompt = render_prompt(
+        FINALIZE_PROMPT,
+        prompt2_output=text,
+        output_format=format or "General Narrative",
+        output_length=json.dumps(metadata.get("length", "Medium")),
+        TOV=json.dumps(metadata.get("tone", "Professional")),
+        lang=json.dumps("English"),
+        NDA=json.dumps(metadata.get("ndaLevel", "Standard"))
+    )
+#    print("Prompt 2:", prompt)
+#    model="chatgpt-4o-latest", 15+5
+#    model="gpt-5.2-chat-latest",  14+2
+#    model="claude-3-7-sonnet-20250219",  15+3
+#    model="claude-sonnet-4-5-20250929",  15+3
+#    model="gemini-2.5-flash",  2.5+0.3
+#    model="gemini-2.5-flash-lite", 0.4+0.1
+#    model="gemini-2.5-pro", 20+2.5
+
+    try:
+        resp = openai_client.chat.completions.create(
+            model="gemini-2.5-flash",
+            messages=[
+                {"role": "system", "content": "Return ONLY valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+        )
+
+        content = resp.choices[0].message.content
+        print("LLM_Final_Resp:", content)
+
+        data = safe_json_parse(content)
+        print("LLM_Final_Resp_Json:", data)
+
+        return data
+
+    except Exception as e:
+
+        print("Final output LLM error:", e)
+        return None
+
+def run_llm_answer(session, rbp):
+
+    text = session["text"]
+    gaps = session["gaps"]
+
+    prompt = render_prompt(
+        ANSWERING_PROMPT,
+        Mo_Transcript=text,
+        Q=json.dumps(gaps),
+        RBP=rbp
+    )
+#    print("Prompt 2:", prompt)
+#    model="chatgpt-4o-latest", 15+5
+#    model="gpt-5.2-chat-latest",  14+2
+#    model="claude-3-7-sonnet-20250219",  15+3
+#    model="claude-sonnet-4-5-20250929",  15+3
+#    model="gemini-2.5-flash",  2.5+0.3
+#    model="gemini-2.5-flash-lite", 0.4+0.1
+#    model="gemini-2.5-pro", 20+2.5
+
+
+    try:
+
+        resp = openai_client.chat.completions.create(
+            model="gemini-2.5-flash",
+            messages=[
+                {"role": "system", "content": "Return ONLY valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+        )
+
+        content = resp.choices[0].message.content
+        print("LLM_Answer_Resp:", content)
+
+        data = safe_json_parse(content)
+        print("LLM_Answer_Resp_Json:", data)
+
+        return data
+
+    except Exception as e:
+
+        print("Answering LLM error:", e)
         return None
 
 
@@ -234,7 +323,16 @@ def create_gap_session(text, metadata, format, llm_questions=None):
     return session_id, gaps
 
 
-def finalize_session(session_id, answers):
+def finalize_output_session(text, metadata, format=None):
+    llm_result = run_llm_finalize_output(text, metadata, format)
+
+    if not llm_result:
+        return None
+
+    return llm_result
+
+
+def finalize_after_gap_session(session_id, answers):
 
     session = sessions.get(session_id)
 
@@ -242,6 +340,20 @@ def finalize_session(session_id, answers):
         return None
 
     llm_result = run_llm_integration(session, answers)
+
+    if not llm_result:
+        return None
+
+    return llm_result
+
+def answer_session(session_id, rbp):
+
+    session = sessions.get(session_id)
+
+    if not session:
+        return None
+
+    llm_result = run_llm_answer(session, rbp)
 
     if not llm_result:
         return None

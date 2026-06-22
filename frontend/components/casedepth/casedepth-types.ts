@@ -25,6 +25,23 @@ export type NeedsInfoResponse = {
   gaps: string[]
 }
 
+export type AnswerResponse = {
+  status: "ANSWERS"
+  session_id: string
+  answers: string[]
+}
+
+export type UserInfoResp = {
+  authenticated: boolean
+  user:{
+      id: number
+      user_name: string
+      user_role: string
+      avatar: string
+  }
+}
+
+
 export type FinalResultResponse = {
   status: "FINAL_RESULT"
   content: string
@@ -49,8 +66,11 @@ export type FinalResultAfterGapFilledResponse = {
 export type ApiResponse =
   | SuccessResponse
   | NeedsInfoResponse
+  | AnswerResponse
   | FinalResultResponse
   | FinalResultAfterGapFilledResponse
+  | UserInfoResp
+ 
 
 export type SynthesizePayload = {
   text: string
@@ -62,6 +82,10 @@ export type SynthesizePayload = {
     industry?: string
     length?: string
   }
+}
+
+export type AnswerPayload = {
+  rbp: string
 }
 
 export type UploadResponse = {
