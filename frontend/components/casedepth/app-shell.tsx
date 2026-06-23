@@ -124,9 +124,9 @@ function LoginModal({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Example:
-https://domain/auth/qr-login?key=7LIrt3u584
-Or Only:
-7LIrt3u584"
+                https://domain/auth/qr-login?key=7LIrt3u584
+                Or Only:
+                7LIrt3u584"
             className="min-h-[120px] w-full rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-black"
           />
 
@@ -410,7 +410,6 @@ export function AppShell() {
             onSubmitGaps={handleFinalize}
             onSubmitAnswer={handleAnswer}
             errorMessage={errorMessage}
-            onAnswer={handleAnswer}
             onReset={handleReset}
             gapAnswers={gapAnswers}
             setGapAnswers={setGapAnswers}

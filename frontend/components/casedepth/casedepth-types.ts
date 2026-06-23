@@ -69,7 +69,6 @@ export type ApiResponse =
   | AnswerResponse
   | FinalResultResponse
   | FinalResultAfterGapFilledResponse
-  | UserInfoResp
  
 
 export type SynthesizePayload = {

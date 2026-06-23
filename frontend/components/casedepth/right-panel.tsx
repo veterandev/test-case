@@ -23,16 +23,15 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import type { ApiResponse, PanelState } from "./casedepth-types";
+import type { ApiResponse, PanelState, AnswerPayload } from "./casedepth-types";
 
 interface RightPanelProps {
   currentState: PanelState;
   data: ApiResponse | null;
   isLoading?: boolean;
   onSubmitGaps: (answers: string[]) => void;
-  onSubmitAnswer: (rbp: string) => void;
+  onSubmitAnswer: (payload: AnswerPayload) => void;
   errorMessage?: string | null;
-  onAnswer?: () => void;
   onReset?: () => void;
   gapAnswers: string[];
   setGapAnswers: Dispatch<SetStateAction<string[]>>;
@@ -45,7 +44,6 @@ export function RightPanel({
   onSubmitGaps,
   onSubmitAnswer,
   errorMessage,
-  onAnswer,
   onReset,
   gapAnswers,
   setGapAnswers,
@@ -218,6 +216,7 @@ function FinalResultView({ data }: { data: ApiResponse | null }) {
 
   const score = data.benchmark_score ?? null;
   const directives = data.directives ?? [];
+  let color1: string = "green";
 
   return (
     <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2">
@@ -238,7 +237,7 @@ function FinalResultView({ data }: { data: ApiResponse | null }) {
         </div>
       </section>
 
-      <OutputCard title="Final Refined Narrative" content={data.content} highlight />
+      <OutputCard title="Final Refined Narrative" desc="Generated textual output from the synthesis pipeline" content={data.content} color1={color1} highlight />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Card className="border-slate-200 xl:col-span-1">
@@ -417,8 +416,11 @@ function NeedsInfoView({
       alert("All the questions have been answered.");
       return;
     }
-    console.log("answer btn ...");
     onSubmitAnswer("Evasive");
+    // onSubmitAnswer({
+    //   rbp: "Evasive",
+    // });
+  
   };
 
   return (
@@ -521,7 +523,7 @@ function OutputCard({
   title: string;
   desc: string;
   content: string;
-  color1?: string;
+  color1: string;
   highlight?: boolean;
 }) {
   const handleCopy = async () => {
