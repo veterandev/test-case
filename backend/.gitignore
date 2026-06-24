@@ -10,4 +10,6 @@
 
 /uploads
 
-/prompts/prompts.py
+/prompts
+
+case_depth.db
