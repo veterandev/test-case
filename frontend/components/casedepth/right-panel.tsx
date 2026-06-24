@@ -377,7 +377,7 @@ function NeedsInfoView({
   data: ApiResponse | null;
   isLoading?: boolean;
   onSubmitGaps: (answers: string[]) => void;
-  onSubmitAnswer: (rbp: string) => void;
+  onSubmitAnswer: (payload: AnswerPayload) => void;
   gapAnswers: string[];
   setGapAnswers: Dispatch<SetStateAction<string[]>>;
 }) {
@@ -416,10 +416,9 @@ function NeedsInfoView({
       alert("All the questions have been answered.");
       return;
     }
-    onSubmitAnswer("Evasive");
-    // onSubmitAnswer({
-    //   rbp: "Evasive",
-    // });
+    onSubmitAnswer({
+      rbp: "Evasive",
+    });
   
   };
 
