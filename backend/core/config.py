@@ -22,6 +22,7 @@ extra_origins = os.getenv("EXTRA_CORS_ORIGINS", "").strip()
 extra_origins_list = [o.strip() for o in extra_origins.split(",") if o.strip()]
 
 allowed_origins = [
+    "http://45.129.38.84:3000",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:8000",
