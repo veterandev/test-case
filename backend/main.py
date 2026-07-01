@@ -25,7 +25,15 @@ from api.routes_synthesis import router as synthesis_router
 from api.routes_stt import router as stt_router
 from api.process_api import router as process_router
 
-app = FastAPI(title="CaseDepth API", version="2.0.0")
+#app = FastAPI(title="CaseDepth API", version="2.0.0")
+
+app = FastAPI(
+    title="CaseDepth API", 
+    version="2.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
+)
 
 app.add_middleware(
     CORSMiddleware,
