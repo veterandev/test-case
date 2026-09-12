@@ -185,6 +185,9 @@ async def finalize(payload: FinalizeRequest):
 @router.post("/api/answer")
 async def answer(payload: AnswerRequest):
 
+    print("ANSWER incoming session_id:", payload.session_id)
+    print("SESSION KEYS:", list(sessions.keys()))
+
     result = answer_session(payload.session_id, payload.rbp)
 
     if result is None:

@@ -107,7 +107,7 @@ def run_llm_synthesis(text, metadata, format):
 
         try:
             resp = openai_client.chat.completions.create(
-                model="gpt-5.2-chat-latest",
+                model="gpt-5.4",
                 messages=[
                     {"role": "system", "content": "Return ONLY valid JSON."},
                     {"role": "user", "content": prompt},
@@ -192,7 +192,7 @@ def run_llm_integration(session, answers):
     try:
 
         resp = openai_client.chat.completions.create(
-            model="gpt-5.2-chat-latest",
+            model="gpt-5.4",
             messages=[
                 {"role": "system", "content": "Return ONLY valid JSON."},
                 {"role": "user", "content": prompt},
@@ -236,7 +236,7 @@ def run_llm_finalize_output(text, metadata, format=None):
 
     try:
         resp = openai_client.chat.completions.create(
-            model="gpt-5.2-chat-latest",
+            model="gpt-5.4",
             messages=[
                 {"role": "system", "content": "Return ONLY valid JSON."},
                 {"role": "user", "content": prompt},
@@ -281,7 +281,7 @@ def run_llm_answer(session, rbp):
     try:
 
         resp = openai_client.chat.completions.create(
-            model="gpt-5.2-chat-latest",
+            model="gpt-5.4",
             messages=[
                 {"role": "system", "content": "Return ONLY valid JSON."},
                 {"role": "user", "content": prompt},
