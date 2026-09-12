@@ -22,9 +22,9 @@ extra_origins = os.getenv("EXTRA_CORS_ORIGINS", "").strip()
 extra_origins_list = [o.strip() for o in extra_origins.split(",") if o.strip()]
 
 allowed_origins = [
-    "https://casedepth.sis-eg.com:3000",
-    "http://casedepth.sis-eg.com:3000",
-    "http://45.129.38.84:3000",
+    "https://app.casedepth.com",
+    "http://app.casedepth.com",
+    "http://191.101.113.211:3000",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:8000",
