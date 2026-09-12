@@ -54,7 +54,28 @@ export function useDictation(
 
     try {
 
-      const protocol =
+      // تعیین آدرس وب‌سوکت از متغیر محیطی یا Fallback هوشمند
+      let wsUrl = process.env.NEXT_PUBLIC_WS_URL
+
+      if (!wsUrl && typeof window !== "undefined") {
+        const isHttps = window.location.protocol === "https:"
+        const protocol = isHttps ? "wss" : "ws"
+        
+        // در محیط پروداکشن (HTTPS) نباید پورت 8000 ذکر شود چون ترافیک از 443 Nginx رد می‌شود
+        // در محیط لوکال مستقیماً به بک‌اَند روی 8000 وصل می‌شود
+        const host = isHttps ? window.location.host : `${window.location.hostname}:8000`
+        wsUrl = `${protocol}://${host}/ws/stt`
+      }
+
+      if (!wsUrl) {
+        throw new Error("WebSocket URL is not configured.")
+      }
+
+      const socket = new WebSocket(wsUrl)
+
+      socketRef.current = socket
+
+/*       const protocol =
         window.location.protocol === "https:" ? "wss" : "ws"
 
       const socket = new WebSocket(
@@ -62,7 +83,7 @@ export function useDictation(
       )
 
       socketRef.current = socket
-
+ */
       await new Promise<void>((resolve, reject) => {
         socket.onopen = () => resolve()
         socket.onerror = reject

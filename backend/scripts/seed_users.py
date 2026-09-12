@@ -3,6 +3,8 @@ from models.user import User
 from models.enums import UserRole
 from utils.security import generate_qr_key
 
+#command to run directly: python -m scripts.seed_users
+
 def create_user(name, email, role):
 
     db = SessionLocal()
